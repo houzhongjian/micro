@@ -1,17 +1,20 @@
 package main
 
 import (
-	"pandaschool.net/demo/micro"
-	"pandaschool.net/demo/micro/example/user/handler"
+	"log"
+	"micro"
+	"user/handler"
 )
 
 func main() {
 	opt := micro.Options{
 		Name:    "user",
-		Addr:    "127.0.0.1:9111",
+		Etcd:    []string{"127.0.0.1:2379"},
 		Handler: &handler.User{},
 	}
 
 	engine := micro.NewServer(&opt)
-	engine.Run()
+	_ = engine.RunHTTP(":9111")
+	_ = engine.RunRPC(":9112")
+	log.Println("over")
 }

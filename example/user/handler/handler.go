@@ -1,7 +1,7 @@
 package handler
 
-import "pandaschool.net/demo/micro"
+import "micro"
 
 type User struct {
-	Ctx micro.Context
+	ctx micro.Context
 }

@@ -1,29 +1,63 @@
 package micro
 
 import (
-	"log"
+	"context"
+	"fmt"
+	"go.etcd.io/etcd/clientv3"
 	"net/http"
 	"path"
 	"reflect"
 	"strings"
 )
 
-//Register .
-func (*Service) Register() {
+//Register 向etcd注册服务.
+func (m *Service) Register() error {
+	//连接etcd.
+	client, err := clientv3.New(clientv3.Config{
+		Endpoints: m.etcdAddr,
+	})
+	if err != nil {
+		return err
+	}
+	m.etcd = client
+
+	//创建租约.
+	lease := clientv3.NewLease(client)
+	_, err = lease.Grant(context.Background(), 60)
+	if err != nil {
+		return err
+	}
+
+	_, err = m.etcd.Put(context.Background(), fmt.Sprintf("/%s/%s", "http", m.name), m.httpAddr)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-//Run .
-func (m *Service) Run() {
-	if err := http.ListenAndServe(m.addr, m); err != nil {
-		log.Panic(err)
-	}
+//RunHTTP 运行http服务.
+func (m *Service) RunHTTP(addr string) *Service {
+	m.httpAddr = addr
+
+	go func() {
+		if err := http.ListenAndServe(m.httpAddr, m); err != nil {
+			panic(err)
+		}
+	}()
+
+	return m
 }
 
-//.
-func (m *Service) RunTLS() {
-	if err := http.ListenAndServe(m.addr, m); err != nil {
-		log.Panic(err)
-	}
+//RunRPC 运行grpc服务.
+func (m *Service) RunRPC(addr string) *Service {
+	m.rpcAddr = addr
+
+	go func() {
+		//todo 启动grpc
+	}()
+
+	return m
 }
 
 func (m *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +95,7 @@ func (m *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//结构体赋值.
-	m.handlerValue.Elem().FieldByName("Ctx").Set(reflect.ValueOf(Context{
+	m.handlerValue.Elem().FieldByName("ctx").Set(reflect.ValueOf(Context{
 		ResponseWriter: w,
 		Request:        r,
 		Host:           r.Host,

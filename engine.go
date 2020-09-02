@@ -3,8 +3,8 @@ package micro
 import "net/http"
 
 type Engine interface {
-	Run()
-	RunTLS()
-	Register()
+	Register() error
+	RunHTTP(addr string) *Service
+	RunRPC(addr string) *Service
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
 }
